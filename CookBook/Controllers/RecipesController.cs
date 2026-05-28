@@ -1,5 +1,5 @@
-using CookBook.Exceptions;
 using CookBook.Models;
+using CookBook.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CookBook.Controllers;
@@ -8,21 +8,20 @@ namespace CookBook.Controllers;
 [Route("api/[controller]")]
 public class RecipesController : ControllerBase
 {
-    private static readonly List<Recipe> Recipes = new();
-    private Recipe? Find(int id) => Recipes.SingleOrDefault(x => x.Id == id);
+    private readonly IRecipeRepository _recipeRepository;
+
+    public RecipesController(IRecipeRepository recipeRepository)
+    {
+        _recipeRepository = recipeRepository;
+    }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Recipe>> GetRecipes() => Recipes.ToList();
+    public ActionResult<IEnumerable<Recipe>> GetRecipes() => _recipeRepository.GetRecipes();
 
     [HttpGet("{id:int}")]
     public ActionResult<Recipe> GetRecipe(int id)
     {
-        var recipe = Find(id);
-
-        if (recipe is null)
-        {
-            throw new NotFoundException("Рецепт не найден");
-        }
+        var recipe = _recipeRepository.GetRecipe(id);
 
         return Ok(recipe);
     }
@@ -30,11 +29,6 @@ public class RecipesController : ControllerBase
     [HttpPost]
     public ActionResult<Recipe> AddRecipe(Recipe recipe)
     {
-        if (Find(recipe.Id) is not null)
-        {
-            throw new AlreadyExistsException("такой рецепт уже существует");
-        }
-        
         if (string.IsNullOrWhiteSpace(recipe.Name))
         {
             return BadRequest();
@@ -49,31 +43,14 @@ public class RecipesController : ControllerBase
         {
             return BadRequest();
         }
-        
-        foreach (var ingredient in recipe.Ingredients)
-        {
-            if (!IngredientController.IngredientList.Any(x => x.Id == ingredient.Ingredient.Id))
-            {
-                throw new NotFoundException("ингредиент не найден");
-            }
-        }
-        
-        recipe.Name = recipe.Name.Trim();
-        recipe.Description = recipe.Description.Trim();
 
-        Recipes.Add(recipe);
+        _recipeRepository.AddRecipe(recipe);
         return CreatedAtAction(nameof(GetRecipe), new { id = recipe.Id }, recipe);
     }
 
     [HttpPut("{id:int}")]
     public ActionResult<Recipe> UpdateRecipe(int id, Recipe recipe)
     {
-        var recipeToUpdate = Find(id);
-        if (recipeToUpdate == null)
-        {
-            throw new NotFoundException("рецепт не найден");
-        }
-
         if (string.IsNullOrWhiteSpace(recipe.Name))
         {
             return BadRequest();
@@ -83,41 +60,20 @@ public class RecipesController : ControllerBase
         {
             return BadRequest();
         }
-        
+
         if (recipe.Ingredients.Count <= 0)
         {
             return BadRequest();
         }
-        
-        foreach (var ingredient in recipe.Ingredients)
-        {
-            if (!IngredientController.IngredientList.Any(x => x.Id == ingredient.Ingredient.Id))
-            {
-                throw new NotFoundException("ингредиент не найден");
-            }
-        }
 
-        recipeToUpdate.Name = recipe.Name.Trim();
-        recipeToUpdate.Description = recipe.Description.Trim();
-        recipeToUpdate.Ingredients.Clear();
-        foreach (var ingredient in recipe.Ingredients)
-        {
-            recipeToUpdate.Ingredients.Add(ingredient);
-        }
-
-        return Ok(recipeToUpdate);
+        var updated = _recipeRepository.UpdateRecipe(id, recipe);
+        return Ok(updated);
     }
 
     [HttpDelete("{id:int}")]
     public ActionResult DeleteRecipe(int id)
     {
-        var recipeToDelete = Find(id);
-        if (recipeToDelete is null)
-        {
-            throw new NotFoundException("рецепт не найден");
-        }
-
-        Recipes.Remove(recipeToDelete);
+        _recipeRepository.DeleteRecipe(id);
 
         return NoContent();
     }
@@ -125,20 +81,10 @@ public class RecipesController : ControllerBase
     [HttpPost("{id}/rating")]
     public ActionResult<Recipe> AddRaiting(int id, [FromBody] int rating)
     {
-        var recipeToRait = Find(id);
-        if (recipeToRait is null)
-        {
-            throw new NotFoundException("рецепт не найден");
-        }
-
         if (rating < 1 || rating > 5)
-        {
             return BadRequest();
-        }
 
-        recipeToRait.RatingSum += rating;
-        recipeToRait.RatingCount++;
-
-        return Ok(recipeToRait);
+        var recipe = _recipeRepository.AddRating(id, rating);
+        return Ok(recipe);
     }
 }
