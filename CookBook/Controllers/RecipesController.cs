@@ -1,4 +1,5 @@
-using CookBook.Models;
+using CookBook.DTOs;
+using CookBook.Mappings;
 using CookBook.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,58 +17,59 @@ public class RecipesController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Recipe>> GetRecipes() => _recipeRepository.GetRecipes();
+    public ActionResult<IEnumerable<RecipeDto>> GetRecipes() => _recipeRepository.GetRecipes().Select(r => r.ToDto()).ToList();
 
     [HttpGet("{id:int}")]
-    public ActionResult<Recipe> GetRecipe(int id)
+    public ActionResult<RecipeDto> GetRecipe(int id)
     {
         var recipe = _recipeRepository.GetRecipe(id);
 
-        return Ok(recipe);
+        return Ok(recipe.ToDto());
     }
 
     [HttpPost]
-    public ActionResult<Recipe> AddRecipe(Recipe recipe)
+    public ActionResult<RecipeDto> AddRecipe(CreateRecipeDto dto)
     {
-        if (string.IsNullOrWhiteSpace(recipe.Name))
+        if (string.IsNullOrWhiteSpace(dto.Name))
         {
             return BadRequest();
         }
 
-        if (string.IsNullOrWhiteSpace(recipe.Description))
+        if (string.IsNullOrWhiteSpace(dto.Description))
         {
             return BadRequest();
         }
 
-        if (recipe.Ingredients.Count <= 0)
+        if (dto.Ingredients.Count <= 0)
         {
             return BadRequest();
         }
-
-        _recipeRepository.AddRecipe(recipe);
-        return CreatedAtAction(nameof(GetRecipe), new { id = recipe.Id }, recipe);
+        
+        var recipe = _recipeRepository.AddRecipe(dto.ToModel());
+        
+        return CreatedAtAction(nameof(GetRecipe), new { id = recipe.Id }, recipe.ToDto());
     }
 
     [HttpPut("{id:int}")]
-    public ActionResult<Recipe> UpdateRecipe(int id, Recipe recipe)
+    public ActionResult<RecipeDto> UpdateRecipe(int id, UpdateRecipeDto dto)
     {
-        if (string.IsNullOrWhiteSpace(recipe.Name))
+        if (string.IsNullOrWhiteSpace(dto.Name))
         {
             return BadRequest();
         }
 
-        if (string.IsNullOrWhiteSpace(recipe.Description))
+        if (string.IsNullOrWhiteSpace(dto.Description))
         {
             return BadRequest();
         }
 
-        if (recipe.Ingredients.Count <= 0)
+        if (dto.Ingredients.Count <= 0)
         {
             return BadRequest();
         }
 
-        var updated = _recipeRepository.UpdateRecipe(id, recipe);
-        return Ok(updated);
+        var updated = _recipeRepository.UpdateRecipe(id, dto.ToModel());
+        return Ok(updated.ToDto());
     }
 
     [HttpDelete("{id:int}")]
@@ -79,12 +81,12 @@ public class RecipesController : ControllerBase
     }
 
     [HttpPost("{id}/rating")]
-    public ActionResult<Recipe> AddRaiting(int id, [FromBody] int rating)
+    public ActionResult<RecipeDto> AddRaiting(int id, AddRatingDto dto)
     {
-        if (rating < 1 || rating > 5)
+        if ( dto.Rating < 1 ||  dto.Rating > 5)
             return BadRequest();
 
-        var recipe = _recipeRepository.AddRating(id, rating);
-        return Ok(recipe);
+        var recipe = _recipeRepository.AddRating(id,  dto.Rating);
+        return Ok(recipe.ToDto());
     }
 }
