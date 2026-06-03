@@ -1,4 +1,3 @@
-using CookBook.Controllers;
 using CookBook.DTOs;
 using CookBook.Models;
 
@@ -34,7 +33,7 @@ public static class RecipeMappings
                 {
                     Amount = i.Amount,
                     Unit = i.Unit,
-                    Ingredient = IngredientController.IngredientList.SingleOrDefault(ing => ing.Id == i.IngredientId)!
+                    IngredientId = i.IngredientId
                 })
                 .ToList(),
         };
@@ -51,7 +50,7 @@ public static class RecipeMappings
                 {
                     Amount = i.Amount,
                     Unit = i.Unit,
-                    Ingredient = IngredientController.IngredientList.SingleOrDefault(ing => ing.Id == i.IngredientId)!
+                    IngredientId = i.IngredientId
                 })
                 .ToList(),
         };

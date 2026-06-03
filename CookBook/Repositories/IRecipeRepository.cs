@@ -1,6 +1,8 @@
 using CookBook.Controllers;
+using CookBook.Database;
 using CookBook.Exceptions;
 using CookBook.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace CookBook.Repositories;
 
@@ -16,20 +18,19 @@ public interface IRecipeRepository
 
 public class RecipeRepository : IRecipeRepository
 {
-    private readonly List<Recipe> _recipes = new();
+    private readonly CookBookDbContext _context;
 
-    private Recipe? Find(int id) => _recipes.SingleOrDefault(x => x.Id == id);
+    public RecipeRepository(CookBookDbContext context)
+    {
+        _context = context;
+    }
+
 
     public Recipe AddRecipe(Recipe recipe)
     {
-        if (Find(recipe.Id) is not null)
-        {
-            throw new AlreadyExistsException("такой рецепт уже существует");
-        }
-
         foreach (var ingredient in recipe.Ingredients)
         {
-            if (!IngredientController.IngredientList.Any(x => x.Id == ingredient.Ingredient.Id))
+            if (!_context.Ingredients.Any(x => x.Id == ingredient.IngredientId))
             {
                 throw new NotFoundException("ингредиент не найден");
             }
@@ -38,13 +39,21 @@ public class RecipeRepository : IRecipeRepository
         recipe.Name = recipe.Name.Trim();
         recipe.Description = recipe.Description.Trim();
 
-        _recipes.Add(recipe);
-        return recipe;
+        _context.Recipes.Add(recipe);
+        _context.SaveChanges();
+
+        return _context.Recipes
+            .Include(r => r.Ingredients)
+            .ThenInclude(ri => ri.Ingredient)
+            .First(r => r.Id == recipe.Id);
     }
 
     public Recipe GetRecipe(int id)
     {
-        var recipe = Find(id);
+        var recipe = _context.Recipes
+            .Include(r => r.Ingredients)
+            .ThenInclude(ri => ri.Ingredient)
+            .FirstOrDefault(x => x.Id == id);
         if (recipe is null)
             throw new NotFoundException("Рецепт не найден");
         return recipe;
@@ -52,12 +61,18 @@ public class RecipeRepository : IRecipeRepository
 
     public List<Recipe> GetRecipes()
     {
-        return _recipes.ToList();
+        return _context.Recipes
+            .Include(r => r.Ingredients)
+            .ThenInclude(ri => ri.Ingredient)
+            .ToList();
     }
 
     public Recipe UpdateRecipe(int id, Recipe recipe)
     {
-        var recipeToUpdate = Find(id);
+        var recipeToUpdate = _context.Recipes
+            .Include(r => r.Ingredients)
+            .FirstOrDefault(x => x.Id == id);
+        
         if (recipeToUpdate == null)
         {
             throw new NotFoundException("рецепт не найден");
@@ -65,7 +80,7 @@ public class RecipeRepository : IRecipeRepository
 
         foreach (var ingredient in recipe.Ingredients)
         {
-            if (!IngredientController.IngredientList.Any(x => x.Id == ingredient.Ingredient.Id))
+            if (!_context.Ingredients.Any(x => x.Id == ingredient.IngredientId))
             {
                 throw new NotFoundException("ингредиент не найден");
             }
@@ -79,33 +94,43 @@ public class RecipeRepository : IRecipeRepository
             recipeToUpdate.Ingredients.Add(ingredient);
         }
 
-        return recipeToUpdate;
+        _context.SaveChanges();
+        
+        return _context.Recipes
+            .Include(r => r.Ingredients)
+            .ThenInclude(ri => ri.Ingredient)
+            .First(r => r.Id == id);
     }
 
     public void DeleteRecipe(int id)
     {
-        var recipeToDelete = Find(id);
+        var recipeToDelete = _context.Recipes.FirstOrDefault(x => x.Id == id);
         if (recipeToDelete is null)
         {
             throw new NotFoundException("рецепт не найден");
         }
 
-        _recipes.Remove(recipeToDelete);
+        _context.Recipes.Remove(recipeToDelete);
 
-        return;
+        _context.SaveChanges();
     }
 
     public Recipe AddRating(int id, int rating)
     {
-        var recipeToRait = Find(id);
+        var recipeToRait = _context.Recipes.FirstOrDefault(x => x.Id == id);
         if (recipeToRait is null)
         {
             throw new NotFoundException("рецепт не найден");
         }
-        
+
         recipeToRait.RatingSum += rating;
         recipeToRait.RatingCount++;
 
-        return recipeToRait;
+        _context.SaveChanges();
+        
+        return _context.Recipes
+            .Include(r => r.Ingredients)
+            .ThenInclude(ri => ri.Ingredient)
+            .First(r => r.Id == id);
     }
 }
