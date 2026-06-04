@@ -9,6 +9,9 @@ namespace CookBook.Controllers;
 [Route("api/[controller]")]
 public class RecipesController : ControllerBase
 {
+    private const int MinRating = 1;
+    private const int MaxRating = 5;
+    
     private readonly IRecipeRepository _recipeRepository;
 
     public RecipesController(IRecipeRepository recipeRepository)
@@ -17,7 +20,8 @@ public class RecipesController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<RecipeDto>> GetRecipes() => _recipeRepository.GetRecipes().Select(r => r.ToDto()).ToList();
+    public ActionResult<IEnumerable<RecipeDto>> GetRecipes() =>
+        _recipeRepository.GetRecipes().Select(r => r.ToDto()).ToList();
 
     [HttpGet("{id:int}")]
     public ActionResult<RecipeDto> GetRecipe(int id)
@@ -30,42 +34,24 @@ public class RecipesController : ControllerBase
     [HttpPost]
     public ActionResult<RecipeDto> AddRecipe(CreateRecipeDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Name))
+        var error = ValidateRecipeDto(dto.Name, dto.Description, dto.Ingredients);
+        if (error != null)
         {
-            return BadRequest();
+            return error;
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Description))
-        {
-            return BadRequest();
-        }
-
-        if (dto.Ingredients.Count <= 0)
-        {
-            return BadRequest();
-        }
-        
         var recipe = _recipeRepository.AddRecipe(dto.ToModel());
-        
+
         return CreatedAtAction(nameof(GetRecipe), new { id = recipe.Id }, recipe.ToDto());
     }
 
     [HttpPut("{id:int}")]
     public ActionResult<RecipeDto> UpdateRecipe(int id, UpdateRecipeDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Name))
+        var error = ValidateRecipeDto(dto.Name, dto.Description, dto.Ingredients);
+        if (error != null)
         {
-            return BadRequest();
-        }
-
-        if (string.IsNullOrWhiteSpace(dto.Description))
-        {
-            return BadRequest();
-        }
-
-        if (dto.Ingredients.Count <= 0)
-        {
-            return BadRequest();
+            return error;
         }
 
         var updated = _recipeRepository.UpdateRecipe(id, dto.ToModel());
@@ -80,13 +66,26 @@ public class RecipesController : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("{id}/rating")]
-    public ActionResult<RecipeDto> AddRaiting(int id, AddRatingDto dto)
+    [HttpPost("{id:int}/rating")]
+    public ActionResult<RecipeDto> AddRating(int id, AddRatingDto dto)
     {
-        if ( dto.Rating < 1 ||  dto.Rating > 5)
-            return BadRequest();
+        if (dto.Rating < MinRating || dto.Rating > MaxRating)
+        {
+            return BadRequest("Оценка должна быть от 1 до 5");
+        }
 
-        var recipe = _recipeRepository.AddRating(id,  dto.Rating);
+        var recipe = _recipeRepository.AddRating(id, dto.Rating);
         return Ok(recipe.ToDto());
+    }
+
+    private ActionResult? ValidateRecipeDto(string name, string description, List<RecipeIngredientInputDto> ingredients)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return BadRequest("Название рецепта обязательно");
+        if (string.IsNullOrWhiteSpace(description))
+            return BadRequest("Описание рецепта обязательно");
+        if (ingredients == null || ingredients.Count == 0)
+            return BadRequest("Рецепт должен содержать хотя бы один ингредиент");
+        return null;
     }
 }

@@ -1,3 +1,4 @@
+using CookBook.Enums;
 using CookBook.Models;
 
 namespace CookBook.DTOs;
@@ -5,5 +6,5 @@ namespace CookBook.DTOs;
 public record RecipeIngredientInputDto(
     int IngredientId,
     double Amount,
-    RecipeIngredient.Units Unit
+    Unit Unit
 );

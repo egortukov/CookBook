@@ -1,3 +1,5 @@
+using CookBook.Enums;
+
 namespace CookBook.Models;
 
 public class RecipeIngredient
@@ -6,20 +8,12 @@ public class RecipeIngredient
     
     public double Amount { get; set; }
     
-    public Units Unit { get; set; }
+    public Unit Unit { get; set; }
     
     public int IngredientId { get; set; }
     
     public int RecipeId { get; set; }
-    
-    public Recipe Recipe { get; set; }
-    public Ingredient Ingredient { get; set; }
-    
-    public enum Units
-    {
-        Grams, 
-        Milliliters,
-        Pieces,
-        Tablespoons
-    }
+
+    public Recipe Recipe { get; set; } = null!;
+    public Ingredient Ingredient { get; set; } = null!;
 }

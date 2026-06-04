@@ -6,10 +6,3 @@ public class NotFoundException : Exception
     {
     }
 }
-
-public class AlreadyExistsException : Exception
-{
-    public AlreadyExistsException(string message) : base(message)
-    {
-    }
-}

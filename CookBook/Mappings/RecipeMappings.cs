@@ -18,7 +18,7 @@ public static class RecipeMappings
                     IngredientName: i.Ingredient.Name
                 ))
                 .ToList(),
-            Rating: recipe.RatingCount == 0 ? 0 : recipe.RatingSum / recipe.RatingCount
+            Rating: recipe.RatingCount == 0 ? 0 : (double)recipe.RatingSum / recipe.RatingCount
         );
     }
 
@@ -28,14 +28,7 @@ public static class RecipeMappings
         {
             Name = dto.Name,
             Description = dto.Description,
-            Ingredients = dto.Ingredients
-                .Select(i => new RecipeIngredient
-                {
-                    Amount = i.Amount,
-                    Unit = i.Unit,
-                    IngredientId = i.IngredientId
-                })
-                .ToList(),
+            Ingredients = MapIngredients(dto.Ingredients)
         };
     }
 
@@ -45,14 +38,19 @@ public static class RecipeMappings
         {
             Name = dto.Name,
             Description = dto.Description,
-            Ingredients = dto.Ingredients
-                .Select(i => new RecipeIngredient
-                {
-                    Amount = i.Amount,
-                    Unit = i.Unit,
-                    IngredientId = i.IngredientId
-                })
-                .ToList(),
+            Ingredients = MapIngredients(dto.Ingredients)
         };
+    }
+    
+    private static List<RecipeIngredient> MapIngredients(List<RecipeIngredientInputDto> ingredients)
+    {
+        return ingredients
+            .Select(i => new RecipeIngredient
+            {
+                Amount = i.Amount,
+                Unit = i.Unit,
+                IngredientId = i.IngredientId
+            })
+            .ToList();
     }
 }

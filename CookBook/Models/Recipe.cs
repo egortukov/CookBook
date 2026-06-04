@@ -7,5 +7,5 @@ public class Recipe
     public required string Description { get; set; }
     public List<RecipeIngredient> Ingredients { get; init; } = new();
     public int RatingCount { get; set; }
-    public double RatingSum { get; set; }
+    public int RatingSum { get; set; }
 }

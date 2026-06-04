@@ -10,4 +10,9 @@ public class CookBookDbContext : DbContext
     public DbSet<RecipeIngredient> RecipeIngredients { get; set; }
     
     public CookBookDbContext(DbContextOptions<CookBookDbContext> options) : base(options) {}
+    
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(CookBookDbContext).Assembly);
+    }
 }
