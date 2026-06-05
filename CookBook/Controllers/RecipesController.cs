@@ -11,7 +11,7 @@ public class RecipesController : ControllerBase
 {
     private const int MinRating = 1;
     private const int MaxRating = 5;
-    
+
     private readonly IRecipeRepository _recipeRepository;
 
     public RecipesController(IRecipeRepository recipeRepository)
@@ -20,8 +20,10 @@ public class RecipesController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<RecipeDto>> GetRecipes() =>
-        _recipeRepository.GetRecipes().Select(r => r.ToDto()).ToList();
+    public ActionResult<IEnumerable<RecipeDto>> GetRecipes()
+    {
+        return _recipeRepository.GetRecipes().Select(r => r.ToDto()).ToList();
+    }
 
     [HttpGet("{id:int}")]
     public ActionResult<RecipeDto> GetRecipe(int id)
@@ -35,10 +37,7 @@ public class RecipesController : ControllerBase
     public ActionResult<RecipeDto> AddRecipe(CreateRecipeDto dto)
     {
         var error = ValidateRecipeDto(dto.Name, dto.Description, dto.Ingredients);
-        if (error != null)
-        {
-            return error;
-        }
+        if (error != null) return error;
 
         var recipe = _recipeRepository.AddRecipe(dto.ToModel());
 
@@ -49,10 +48,7 @@ public class RecipesController : ControllerBase
     public ActionResult<RecipeDto> UpdateRecipe(int id, UpdateRecipeDto dto)
     {
         var error = ValidateRecipeDto(dto.Name, dto.Description, dto.Ingredients);
-        if (error != null)
-        {
-            return error;
-        }
+        if (error != null) return error;
 
         var updated = _recipeRepository.UpdateRecipe(id, dto.ToModel());
         return Ok(updated.ToDto());
@@ -69,10 +65,7 @@ public class RecipesController : ControllerBase
     [HttpPost("{id:int}/rating")]
     public ActionResult<RecipeDto> AddRating(int id, AddRatingDto dto)
     {
-        if (dto.Rating < MinRating || dto.Rating > MaxRating)
-        {
-            return BadRequest("Оценка должна быть от 1 до 5");
-        }
+        if (dto.Rating < MinRating || dto.Rating > MaxRating) return BadRequest("Оценка должна быть от 1 до 5");
 
         var recipe = _recipeRepository.AddRating(id, dto.Rating);
         return Ok(recipe.ToDto());

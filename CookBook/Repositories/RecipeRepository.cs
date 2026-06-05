@@ -49,26 +49,23 @@ public class RecipeRepository : IRecipeRepository
     public Recipe UpdateRecipe(int id, Recipe recipe)
     {
         var recipeToUpdate = GetRecipeWithIngredients(id);
-    
+
         EnsureIngredientsExist(recipe.Ingredients);
-    
+
         recipeToUpdate.Name = recipe.Name.Trim();
         recipeToUpdate.Description = recipe.Description.Trim();
         recipeToUpdate.Ingredients.Clear();
-        foreach (var ingredient in recipe.Ingredients)
-        {
-            recipeToUpdate.Ingredients.Add(ingredient);
-        }
+        foreach (var ingredient in recipe.Ingredients) recipeToUpdate.Ingredients.Add(ingredient);
 
         _context.SaveChanges();
-    
+
         return recipeToUpdate;
     }
 
     public void DeleteRecipe(int id)
     {
         var recipeToDelete = GetRecipeWithIngredients(id);
-        
+
         _context.Recipes.Remove(recipeToDelete);
 
         _context.SaveChanges();
@@ -77,23 +74,19 @@ public class RecipeRepository : IRecipeRepository
     public Recipe AddRating(int id, int rating)
     {
         var recipe = GetRecipeWithIngredients(id);
-        
+
         recipe.RatingSum += rating;
         recipe.RatingCount++;
-        
+
         _context.SaveChanges();
-        return recipe; 
+        return recipe;
     }
 
     private void EnsureIngredientsExist(List<RecipeIngredient> ingredients)
     {
         foreach (var ingredient in ingredients)
-        {
             if (!_context.Ingredients.Any(x => x.Id == ingredient.IngredientId))
-            {
                 throw new NotFoundException("Ингредиент не найден");
-            }
-        }
     }
 
     private Recipe GetRecipeWithIngredients(int id)

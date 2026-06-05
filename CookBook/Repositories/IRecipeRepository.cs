@@ -11,4 +11,3 @@ public interface IRecipeRepository
     void DeleteRecipe(int id);
     Recipe AddRating(int id, int rating);
 }
-
