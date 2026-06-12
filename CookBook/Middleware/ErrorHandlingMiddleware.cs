@@ -23,6 +23,16 @@ public class ErrorHandlingMiddleware
             context.Response.StatusCode = (int)HttpStatusCode.NotFound;
             await context.Response.WriteAsJsonAsync(new { error = ex.Message });
         }
+        catch (AlreadyExistsException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+        }
+        catch (ForbiddenException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+        }
         catch (Exception)
         {
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;

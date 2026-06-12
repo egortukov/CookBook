@@ -1,12 +1,11 @@
 using CookBook.Database;
 using CookBook.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CookBook.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-public class IngredientsController : ControllerBase
+public class IngredientsController : BaseController
 {
     private readonly CookBookDbContext _context;
 
@@ -15,6 +14,7 @@ public class IngredientsController : ControllerBase
         _context = context;
     }
 
+    [AllowAnonymous]
     [HttpGet]
     public ActionResult<List<IngredientDto>> GetIngredients()
     {

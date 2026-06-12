@@ -22,10 +22,11 @@ public static class RecipeMappings
         );
     }
 
-    public static Recipe ToModel(this CreateRecipeDto dto)
+    public static Recipe ToModel(this CreateRecipeDto dto, int authorId)
     {
         return new Recipe
         {
+            AuthorId = authorId,
             Name = dto.Name,
             Description = dto.Description,
             Ingredients = MapIngredients(dto.Ingredients)
