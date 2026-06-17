@@ -1,0 +1,1152 @@
+// FILE: ./Configurations/JwtOptions.cs
+using System.ComponentModel.DataAnnotations;
+
+namespace CookBook.Configurations;
+
+public class JwtOptions
+{
+    [Required]
+    public required string Issuer { get; init; }
+    [Required]
+    public required string Audience { get; init; }
+    [Required]
+    public required string Secret { get; init; }
+    [Required]
+    public required int ExpirationMinutes { get; init; }
+}
+// FILE: ./Middleware/ErrorHandlingMiddleware.cs
+using System.Net;
+using CookBook.Exceptions;
+
+namespace CookBook.Middleware;
+
+public class ErrorHandlingMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public ErrorHandlingMiddleware(RequestDelegate next)
+    {
+        _next = next;
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        try
+        {
+            await _next(context);
+        }
+        catch (NotFoundException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+        }
+        catch (AlreadyExistsException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+        }
+        catch (ForbiddenException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+        }
+        catch (UnauthorizedException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+        }
+        catch (Exception)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            await context.Response.WriteAsJsonAsync(new { error = "Внутренняя ошибка сервера" });
+        }
+    }
+}
+// FILE: ./Database/Configurations/UserConfiguration.cs
+using CookBook.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace CookBook.Database.Configurations;
+
+public class UserConfiguration : IEntityTypeConfiguration<User>
+{
+    public void Configure(EntityTypeBuilder<User> builder)
+    {
+        builder.Property(r => r.Login)
+            .IsRequired()
+            .HasMaxLength(128);
+
+        builder.Property(r => r.PasswordHash)
+            .IsRequired()
+            .HasMaxLength(256);
+        
+        builder.HasIndex(u => u.Login).IsUnique();
+    }
+}
+// FILE: ./Database/Configurations/RecipeConfiguration.cs
+using CookBook.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace CookBook.Database.Configurations;
+
+public class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
+{
+    public void Configure(EntityTypeBuilder<Recipe> builder)
+    {
+        builder.Property(r => r.Name)
+            .IsRequired()
+            .HasMaxLength(200);
+
+        builder.Property(r => r.Description)
+            .IsRequired()
+            .HasMaxLength(2000);
+    }
+}
+// FILE: ./Database/CookBookDbContext.cs
+using CookBook.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
+namespace CookBook.Database;
+
+public class CookBookDbContext : DbContext
+{
+    private readonly DatabaseOptions _dbOptions;
+    
+    public DbSet<Recipe> Recipes { get; set; }
+    public DbSet<Ingredient> Ingredients { get; set; }
+    public DbSet<RecipeIngredient> RecipeIngredients { get; set; }
+    public DbSet<User> Users { get; set; }
+    
+    public CookBookDbContext(DbContextOptions<CookBookDbContext> options, IOptions<DatabaseOptions> dbOptions) : base(options)
+    {
+        _dbOptions = dbOptions.Value;
+    }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        optionsBuilder.UseNpgsql(_dbOptions.ConnectionString);
+        optionsBuilder.LogTo(Console.WriteLine, LogLevel.Debug);
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(CookBookDbContext).Assembly);
+    }
+}
+// FILE: ./Database/DatabaseOptions.cs
+using System.ComponentModel.DataAnnotations;
+
+namespace CookBook.Database;
+
+public class DatabaseOptions
+{
+    [Required] public required string Host { get; init; }
+
+    [Required] public int Port { get; init; }
+
+    [Required] public required string Username { get; init; }
+
+    [Required] public required string Password { get; init; }
+
+    [Required] public required string Database { get; init; }
+
+    public string ConnectionString
+        => $"Host={Host};Port={Port};Username={Username};Password={Password};Database={Database}";
+}
+// FILE: ./bin/Debug/net8.0/appsettings.json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}
+// FILE: ./bin/Debug/net8.0/appsettings.Development.json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "Database": {
+    "Host": "localhost",
+    "Port": 5432,
+    "Username": "postgres",
+    "Password": "",
+    "Database": "CookBook"
+  },
+  "Jwt": {
+    "Issuer": "CookBook",
+    "ExpirationMinutes": 60,
+    "Audience": "CookBookClient"
+  }
+}
+// FILE: ./bin/Debug/net9.0/CookBook.staticwebassets.endpoints.json
+{"Version":1,"ManifestType":"Build","Endpoints":[]}
+// FILE: ./bin/Debug/net9.0/appsettings.json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=CookBook"
+  }
+}
+// FILE: ./bin/Debug/net9.0/appsettings.Development.json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
+}
+// FILE: ./Enums/Unit.cs
+namespace CookBook.Enums;
+
+public enum Unit
+{
+    Grams,
+    Milliliters,
+    Pieces,
+    Tablespoons
+}
+// FILE: ./appsettings.json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}
+// FILE: ./Repositories/RecipeRepository.cs
+using CookBook.Database;
+using CookBook.Exceptions;
+using CookBook.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace CookBook.Repositories;
+
+public class RecipeRepository : IRecipeRepository
+{
+    private readonly CookBookDbContext _context;
+
+    public RecipeRepository(CookBookDbContext context)
+    {
+        _context = context;
+    }
+
+    public Recipe AddRecipe(Recipe recipe)
+    {
+        EnsureIngredientsExist(recipe.Ingredients);
+
+        recipe.Name = recipe.Name.Trim();
+        recipe.Description = recipe.Description.Trim();
+
+        _context.Recipes.Add(recipe);
+        _context.SaveChanges();
+
+        return GetRecipeWithIngredients(recipe.Id);
+    }
+
+    public Recipe GetRecipe(int id)
+    {
+        var recipe = _context.Recipes
+            .Include(r => r.Ingredients)
+            .ThenInclude(ri => ri.Ingredient)
+            .FirstOrDefault(x => x.Id == id);
+        if (recipe is null)
+            throw new NotFoundException("Рецепт не найден");
+        return recipe;
+    }
+
+    public List<Recipe> GetRecipes()
+    {
+        return _context.Recipes
+            .Include(r => r.Ingredients)
+            .ThenInclude(ri => ri.Ingredient)
+            .ToList();
+    }
+
+    public Recipe UpdateRecipe(Recipe recipe)
+    {
+        EnsureIngredientsExist(recipe.Ingredients);
+
+        recipe.Name = recipe.Name.Trim();
+        recipe.Description = recipe.Description.Trim();
+        
+        _context.SaveChanges();
+
+        return GetRecipeWithIngredients(recipe.Id);
+    }
+
+    public void DeleteRecipe(Recipe recipe)
+    {
+        _context.Recipes.Remove(recipe);
+
+        _context.SaveChanges();
+    }
+
+    public Recipe AddRating(int id, int rating)
+    {
+        var recipe = GetRecipeWithIngredients(id);
+
+        recipe.RatingSum += rating;
+        recipe.RatingCount++;
+
+        _context.SaveChanges();
+        return recipe;
+    }
+
+    private void EnsureIngredientsExist(List<RecipeIngredient> ingredients)
+    {
+        foreach (var ingredient in ingredients)
+            if (!_context.Ingredients.Any(x => x.Id == ingredient.IngredientId))
+                throw new NotFoundException("Ингредиент не найден");
+    }
+
+    private Recipe GetRecipeWithIngredients(int id)
+    {
+        var recipe = _context.Recipes
+            .Include(r => r.Ingredients)
+            .ThenInclude(ri => ri.Ingredient)
+            .FirstOrDefault(r => r.Id == id);
+        if (recipe is null)
+            throw new NotFoundException("Рецепт не найден");
+        return recipe;
+    }
+}
+// FILE: ./Repositories/IRecipeRepository.cs
+using CookBook.Models;
+
+namespace CookBook.Repositories;
+
+public interface IRecipeRepository
+{
+    Recipe AddRecipe(Recipe recipe);
+    Recipe GetRecipe(int id);
+    List<Recipe> GetRecipes();
+    Recipe UpdateRecipe(Recipe recipe);
+    void DeleteRecipe(Recipe recipe);
+    Recipe AddRating(int id, int rating);
+}
+// FILE: ./Models/Ingredient.cs
+namespace CookBook.Models;
+
+public class Ingredient
+{
+    public int Id { get; set; }
+
+    public required string Name { get; set; }
+
+    public List<RecipeIngredient> RecipeIngredients { get; set; } = new();
+}
+// FILE: ./Models/RecipeIngredient.cs
+using CookBook.Enums;
+
+namespace CookBook.Models;
+
+public class RecipeIngredient
+{
+    public int Id { get; set; }
+
+    public double Amount { get; set; }
+
+    public Unit Unit { get; set; }
+
+    public int IngredientId { get; set; }
+
+    public int RecipeId { get; set; }
+
+    public Recipe Recipe { get; set; } = null!;
+    public Ingredient Ingredient { get; set; } = null!;
+}
+// FILE: ./Models/User.cs
+namespace CookBook.Models;
+
+public class User
+{
+    public int Id { get; set; }
+    public required string Login { get; set; }
+    public required string PasswordHash { get; init; }
+    public List<Recipe> Recipes { get; set; } = new();
+}
+// FILE: ./Models/Recipe.cs
+namespace CookBook.Models;
+
+public class Recipe
+{
+    public int Id { get; init; }
+    public int AuthorId { get; init; }
+    public User Author { get; init; } = null!;
+    public required string Name { get; set; }
+    public required string Description { get; set; }
+    public List<RecipeIngredient> Ingredients { get; init; } = new();
+    public int RatingCount { get; set; }
+    public int RatingSum { get; set; }
+}
+// FILE: ./Exceptions/ForbiddenException.cs
+namespace CookBook.Exceptions;
+
+public class ForbiddenException : Exception
+{
+    public ForbiddenException(string message) : base(message)
+    {
+    }
+}
+// FILE: ./Exceptions/AlreadyExistsException.cs
+namespace CookBook.Exceptions;
+
+public class AlreadyExistsException : Exception
+{
+    public AlreadyExistsException(string message) : base(message)
+    {
+    }
+}
+// FILE: ./Exceptions/NotFoundException.cs
+namespace CookBook.Exceptions;
+
+public class NotFoundException : Exception
+{
+    public NotFoundException(string message) : base(message)
+    {
+    }
+}
+// FILE: ./Exceptions/UnauthorizedException.cs
+namespace CookBook.Exceptions;
+
+public class UnauthorizedException : Exception
+{
+    public UnauthorizedException(string message) : base(message)
+    {
+    }
+}
+// FILE: ./Extensions/HttpContextExtension.cs
+using System.Security.Claims;
+
+namespace CookBook.Extensions;
+
+public static class HttpContextExtensions
+{
+    public static int? GetUserId(this HttpContext context)
+    {
+        var claim = context.User.FindFirst(ClaimTypes.NameIdentifier);
+        if (claim is null) return null;
+        return int.TryParse(claim!.Value, out var Id) ? Id : null;
+    }
+}
+// FILE: ./DTOs/IngredientDto.cs
+namespace CookBook.DTOs;
+
+public record IngredientDto(int Id, string Name);
+// FILE: ./DTOs/RecipeIngredientInputDto.cs
+using CookBook.Enums;
+
+namespace CookBook.DTOs;
+
+public record RecipeIngredientInputDto(
+    int IngredientId,
+    double Amount,
+    Unit Unit
+);
+// FILE: ./DTOs/AddRatingDto.cs
+namespace CookBook.DTOs;
+
+public record AddRatingDto(
+    int Rating
+);
+// FILE: ./DTOs/CreateRecipeDto.cs
+namespace CookBook.DTOs;
+
+public record CreateRecipeDto(
+    string Name,
+    string Description,
+    List<RecipeIngredientInputDto> Ingredients
+);
+// FILE: ./DTOs/RegisterDto.cs
+namespace CookBook.DTOs;
+
+public record RegisterDto(
+    string Login,
+    string Password
+);
+// FILE: ./DTOs/RecipeIngredientDto.cs
+using CookBook.Enums;
+
+namespace CookBook.DTOs;
+
+public record RecipeIngredientDto(
+    double Amount,
+    Unit Unit,
+    string IngredientName
+);
+// FILE: ./DTOs/LoginDto.cs
+namespace CookBook.DTOs;
+
+public record LoginDto(
+    string Login,
+    string Password
+);
+// FILE: ./DTOs/UpdateRecipeDto.cs
+namespace CookBook.DTOs;
+
+public record UpdateRecipeDto(
+    string Name,
+    string Description,
+    List<RecipeIngredientInputDto> Ingredients
+);
+// FILE: ./DTOs/RecipeDto.cs
+namespace CookBook.DTOs;
+
+public record RecipeDto(
+    int Id,
+    string Name,
+    string Description,
+    List<RecipeIngredientDto> Ingredients,
+    double Rating
+);
+// FILE: ./Properties/launchSettings.json
+﻿{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:30514",
+      "sslPort": 44308
+    }
+  },
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "applicationUrl": "http://localhost:5127",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "https": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "applicationUrl": "https://localhost:7099;http://localhost:5127",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
+// FILE: ./Mappings/RecipeMappings.cs
+using CookBook.DTOs;
+using CookBook.Models;
+
+namespace CookBook.Mappings;
+
+public static class RecipeMappings
+{
+    public static RecipeDto ToDto(this Recipe recipe)
+    {
+        return new RecipeDto(
+            recipe.Id,
+            recipe.Name,
+            recipe.Description,
+            recipe.Ingredients
+                .Select(i => new RecipeIngredientDto(
+                    i.Amount,
+                    i.Unit,
+                    i.Ingredient.Name
+                ))
+                .ToList(),
+            recipe.RatingCount == 0 ? 0 : (double)recipe.RatingSum / recipe.RatingCount
+        );
+    }
+
+    public static Recipe ToModel(this CreateRecipeDto dto, int authorId)
+    {
+        return new Recipe
+        {
+            AuthorId = authorId,
+            Name = dto.Name,
+            Description = dto.Description,
+            Ingredients = MapIngredients(dto.Ingredients)
+        };
+    }
+
+    public static Recipe ToModel(this UpdateRecipeDto dto)
+    {
+        return new Recipe
+        {
+            Name = dto.Name,
+            Description = dto.Description,
+            Ingredients = MapIngredients(dto.Ingredients)
+        };
+    }
+
+    private static List<RecipeIngredient> MapIngredients(List<RecipeIngredientInputDto> ingredients)
+    {
+        return ingredients
+            .Select(i => new RecipeIngredient
+            {
+                Amount = i.Amount,
+                Unit = i.Unit,
+                IngredientId = i.IngredientId
+            })
+            .ToList();
+    }
+}
+// FILE: ./appsettings.Development.json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "Database": {
+    "Host": "localhost",
+    "Port": 5432,
+    "Username": "postgres",
+    "Password": "",
+    "Database": "CookBook"
+  },
+  "Jwt": {
+    "Issuer": "CookBook",
+    "ExpirationMinutes": 60,
+    "Audience": "CookBookClient"
+  }
+}
+// FILE: ./Controllers/RecipesController.cs
+using CookBook.DTOs;
+using CookBook.Exceptions;
+using CookBook.Extensions;
+using CookBook.Mappings;
+using CookBook.Models;
+using CookBook.Repositories;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace CookBook.Controllers;
+
+public class RecipesController : BaseController
+{
+    private readonly IRecipeRepository _recipeRepository;
+
+    public RecipesController(IRecipeRepository recipeRepository)
+    {
+        _recipeRepository = recipeRepository;
+    }
+
+    [AllowAnonymous]
+    [HttpGet]
+    public ActionResult<IEnumerable<RecipeDto>> GetRecipes()
+    {
+        return _recipeRepository.GetRecipes().Select(r => r.ToDto()).ToList();
+    }
+
+    [AllowAnonymous]
+    [HttpGet("{id:int}")]
+    public ActionResult<RecipeDto> GetRecipe(int id)
+    {
+        var recipe = _recipeRepository.GetRecipe(id);
+
+        return Ok(recipe.ToDto());
+    }
+
+    [HttpPost]
+    public ActionResult<RecipeDto> AddRecipe(CreateRecipeDto dto)
+    {
+        var authorId = HttpContext.GetUserId();
+        
+        if (authorId == null)
+        {
+            throw new UnauthorizedException("Авторизуйтесь.");
+        }
+
+        var recipe = _recipeRepository.AddRecipe(dto.ToModel(authorId.Value));
+
+        return CreatedAtAction(nameof(GetRecipe), new { id = recipe.Id }, recipe.ToDto());
+    }
+
+    [HttpPut("{id:int}")]
+    public ActionResult<RecipeDto> UpdateRecipe(int id,UpdateRecipeDto dto)
+    {
+        var recipe = EnsureUserOwnsRecipe(id);
+        
+        recipe.Name = dto.Name;
+        recipe.Description = dto.Description;
+        recipe.Ingredients.Clear();
+        foreach (var i in dto.Ingredients)
+            recipe.Ingredients.Add(new RecipeIngredient
+            {
+                IngredientId = i.IngredientId,
+                Amount = i.Amount,
+                Unit = i.Unit
+            });
+
+        var updated = _recipeRepository.UpdateRecipe(recipe);
+        return Ok(updated.ToDto());
+    }
+
+    [HttpDelete("{id:int}")]
+    public ActionResult DeleteRecipe(int id)
+    {
+        
+        var recipe = EnsureUserOwnsRecipe(id);
+        
+        _recipeRepository.DeleteRecipe(recipe);
+
+        return NoContent();
+    }
+
+    [HttpPost("{id:int}/rating")]
+    public ActionResult<RecipeDto> AddRating(int id, AddRatingDto dto)
+    {
+        var recipe = _recipeRepository.AddRating(id, dto.Rating);
+        return Ok(recipe.ToDto());
+    }
+
+    private Recipe EnsureUserOwnsRecipe(int recipeId)
+    {
+        var userId = HttpContext.GetUserId();
+
+        if (userId == null)
+        {
+            throw new UnauthorizedException("Авторизуйтесь.");
+        }
+
+        var recipe = _recipeRepository.GetRecipe(recipeId);
+
+        if (recipe.AuthorId != userId)
+        {
+            throw new ForbiddenException("Вы не являетесь автором этого рецепта");
+        }
+        
+        return recipe;
+    }
+}
+// FILE: ./Controllers/IngredientsController.cs
+using CookBook.Database;
+using CookBook.DTOs;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace CookBook.Controllers;
+
+public class IngredientsController : BaseController
+{
+    private readonly CookBookDbContext _context;
+
+    public IngredientsController(CookBookDbContext context)
+    {
+        _context = context;
+    }
+
+    [AllowAnonymous]
+    [HttpGet]
+    public ActionResult<List<IngredientDto>> GetIngredients()
+    {
+        return _context.Ingredients
+            .Select(i => new IngredientDto(i.Id, i.Name))
+            .ToList();
+    }
+}
+// FILE: ./Controllers/AuthController.cs
+using CookBook.DTOs;
+using CookBook.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace CookBook.Controllers;
+
+public class AuthController(IAuthService authService) : BaseController
+{
+    [AllowAnonymous]
+    [HttpPost("register")]
+    public ActionResult Register(RegisterDto dto)
+    {
+        var user = authService.Register(dto);
+        return Ok(user.Id);
+    }
+    
+    [AllowAnonymous]
+    [HttpPost("login")]
+    public ActionResult<string> Login(LoginDto dto)
+    {
+        var token = authService.Login(dto);
+        return Ok(token);
+    }
+}
+// FILE: ./Controllers/BaseController.cs
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace CookBook.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class BaseController : ControllerBase;
+// FILE: ./Services/IAuthService.cs
+using CookBook.DTOs;
+using CookBook.Models;
+
+namespace CookBook.Services;
+
+public interface IAuthService
+{
+    public User Register(RegisterDto dto);
+    public string Login(LoginDto dto);
+}
+// FILE: ./Services/JwtTokenGenerator.cs
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using CookBook.Configurations;
+using CookBook.Models;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using JwtRegisteredClaimNames = Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames;
+
+namespace CookBook.Services;
+
+public class JwtTokenGenerator(IOptions<JwtOptions> options) : IJwtTokenGenerator
+{
+    private readonly JwtOptions _options = options.Value;
+
+    public string Generate(User user)
+    {
+        SigningCredentials credentials = new(
+            new SymmetricSecurityKey(Convert.FromBase64String(_options.Secret)),
+            SecurityAlgorithms.HmacSha256
+        );
+
+        var claims = new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new Claim(JwtRegisteredClaimNames.GivenName, user.Login),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+
+        var now = DateTime.UtcNow;
+        var expiration = now.AddMinutes(_options.ExpirationMinutes);
+
+        JwtSecurityToken securityToken = new(
+            issuer: _options.Issuer,
+            audience: _options.Audience,
+            claims: claims,
+            expires: expiration,
+            signingCredentials: credentials
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(securityToken);
+    }
+}
+// FILE: ./Services/IJwtTokenGenerator.cs
+using CookBook.Models;
+
+namespace CookBook.Services;
+
+public interface IJwtTokenGenerator
+{
+    string Generate(User user);
+}
+// FILE: ./Services/Validators/LoginValidator.cs
+using CookBook.DTOs;
+using FluentValidation;
+
+namespace CookBook.Services.Validators;
+
+public class LoginValidator : AbstractValidator<LoginDto>
+{
+    public LoginValidator()
+    {
+        RuleFor(dto => dto.Login)
+            .NotNull()
+            .NotEmpty()
+            .MaximumLength(128);
+
+        RuleFor(dto => dto.Password)
+            .NotNull()
+            .NotEmpty()
+            .MaximumLength(256);
+    }
+}
+// FILE: ./Services/Validators/AddRatingValidator.cs
+using CookBook.DTOs;
+using FluentValidation;
+
+namespace CookBook.Services.Validators;
+
+public class AddRatingValidator : AbstractValidator<AddRatingDto>
+{
+    public AddRatingValidator()
+    {
+        RuleFor(dto => dto.Rating)
+            .InclusiveBetween(1, 5)
+            .WithMessage("Оценка должна быть от 1 до 5");
+    }
+}
+// FILE: ./Services/Validators/CreateRecipeValidator.cs
+using CookBook.DTOs;
+using FluentValidation;
+
+namespace CookBook.Services.Validators;
+
+public class CreateRecipeValidator : AbstractValidator<CreateRecipeDto>
+{
+    public CreateRecipeValidator()
+    {
+        RuleFor(dto => dto.Name)
+            .NotNull()
+            .NotEmpty()
+            .MaximumLength(200);
+
+        RuleFor(dto => dto.Description)
+            .NotNull()
+            .NotEmpty()
+            .MaximumLength(2000);
+        
+        RuleFor(dto => dto.Ingredients)
+            .NotNull()
+            .NotEmpty()
+            .WithMessage("Рецепт должен содержать хотя бы один ингредиент");
+
+        RuleForEach(dto => dto.Ingredients)
+            .SetValidator(new RecipeIngredientInputValidator());
+    }
+}
+// FILE: ./Services/Validators/UpdateRecipeValidator.cs
+using CookBook.DTOs;
+using FluentValidation;
+
+namespace CookBook.Services.Validators;
+
+public class UpdateRecipeValidator : AbstractValidator<UpdateRecipeDto>
+{
+    public UpdateRecipeValidator()
+    {
+        RuleFor(dto => dto.Name)
+            .NotNull()
+            .NotEmpty()
+            .MaximumLength(200);
+
+        RuleFor(dto => dto.Description)
+            .NotNull()
+            .NotEmpty()
+            .MaximumLength(2000);
+
+        RuleFor(dto => dto.Ingredients)
+            .NotNull()
+            .NotEmpty()
+            .WithMessage("Рецепт должен содержать хотя бы один ингредиент");
+
+        RuleForEach(dto => dto.Ingredients)
+            .SetValidator(new RecipeIngredientInputValidator());
+    }
+}
+// FILE: ./Services/Validators/RecipeIngredientInputValidator.cs
+using CookBook.DTOs;
+using FluentValidation;
+
+namespace CookBook.Services.Validators;
+
+public class RecipeIngredientInputValidator: AbstractValidator<RecipeIngredientInputDto>
+{
+    public RecipeIngredientInputValidator()
+    {
+        RuleFor(dto => dto.IngredientId)
+            .GreaterThan(0)
+            .WithMessage("Ингредиент должен быть выбран");
+
+        RuleFor(dto => dto.Amount)
+            .GreaterThan(0)
+            .WithMessage("Количество должно быть больше 0");
+    }
+}
+// FILE: ./Services/Validators/RegisterValidator.cs
+using CookBook.DTOs;
+using FluentValidation;
+
+namespace CookBook.Services.Validators;
+
+public class RegisterValidator : AbstractValidator<RegisterDto>
+{
+    public RegisterValidator()
+    {
+        RuleFor(dto => dto.Login)
+            .NotNull()
+            .NotEmpty()
+            .MaximumLength(128);
+
+        RuleFor(dto => dto.Password)
+            .NotNull()
+            .NotEmpty()
+            .MaximumLength(256);
+    }
+}
+// FILE: ./Services/AuthService.cs
+using CookBook.Database;
+using CookBook.DTOs;
+using CookBook.Exceptions;
+using CookBook.Models;
+
+namespace CookBook.Services;
+
+public class AuthService(CookBookDbContext dbContext, IJwtTokenGenerator jwtTokenGenerator) : IAuthService
+{
+    public User Register(RegisterDto dto)
+    {
+        if (dbContext.Users.Any(u => u.Login == dto.Login))
+        {
+            throw new AlreadyExistsException("Пользователь с таким Логином уже существует");
+        }
+                
+        var user = new User
+        {
+            Login = dto.Login,
+            PasswordHash =  BCrypt.Net.BCrypt.HashPassword(dto.Password)
+        };
+        dbContext.Users.Add(user);
+        dbContext.SaveChanges();
+        
+        return user;
+    }
+
+    public string Login(LoginDto dto)
+    {
+        var user = dbContext.Users.FirstOrDefault(u => u.Login == dto.Login);
+        
+        if (user is null)
+        {
+            throw new UnauthorizedException("Неверный логин или пароль");
+        }
+
+        if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+        {
+            throw new UnauthorizedException("Неверный логин или пароль");
+        }
+
+        return jwtTokenGenerator.Generate(user);
+    }
+}
+// FILE: ./Program.cs
+using CookBook.Configurations;
+using CookBook.Database;
+using CookBook.Middleware;
+using CookBook.Repositories;
+using CookBook.Services;
+using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddOptions<DatabaseOptions>()
+    .Bind(builder.Configuration.GetRequiredSection("Database"))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddOptions<JwtOptions>()
+    .Bind(builder.Configuration.GetRequiredSection("Jwt"))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddDbContext<CookBookDbContext>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddTransient<IJwtTokenGenerator, JwtTokenGenerator>();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition(
+        JwtBearerDefaults.AuthenticationScheme,
+        new OpenApiSecurityScheme
+        {
+            In = ParameterLocation.Header,
+            Description = "Please enter a valid token",
+            Name = "Authorization",
+            Type = SecuritySchemeType.Http,
+            Scheme = JwtBearerDefaults.AuthenticationScheme,
+            BearerFormat = "JWT",
+        });
+
+    options.AddSecurityRequirement(
+        new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Id = JwtBearerDefaults.AuthenticationScheme,
+                        Type = ReferenceType.SecurityScheme,
+                    },
+                },
+                Array.Empty<string>()
+            },
+        });
+});
+builder.Services.AddScoped<IRecipeRepository, RecipeRepository>();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        var jwtOptions = builder.Configuration
+            .GetRequiredSection("Jwt")
+            .Get<JwtOptions>()!;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Convert.FromBase64String(jwtOptions.Secret))
+        };
+    });
+
+var app = builder.Build();
+
+app.UseMiddleware<ErrorHandlingMiddleware>();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();

@@ -3,13 +3,17 @@ using CookBook.Database;
 using CookBook.Middleware;
 using CookBook.Repositories;
 using CookBook.Services;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
+builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddOptions<DatabaseOptions>()
     .Bind(builder.Configuration.GetRequiredSection("Database"))
     .ValidateDataAnnotations()

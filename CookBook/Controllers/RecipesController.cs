@@ -11,9 +11,6 @@ namespace CookBook.Controllers;
 
 public class RecipesController : BaseController
 {
-    private const int MinRating = 1;
-    private const int MaxRating = 5;
-
     private readonly IRecipeRepository _recipeRepository;
 
     public RecipesController(IRecipeRepository recipeRepository)
@@ -40,12 +37,6 @@ public class RecipesController : BaseController
     [HttpPost]
     public ActionResult<RecipeDto> AddRecipe(CreateRecipeDto dto)
     {
-        var error = ValidateRecipeDto(dto.Name, dto.Description, dto.Ingredients);
-        if (error != null)
-        {
-            return error;
-        }
-
         var authorId = HttpContext.GetUserId();
         
         if (authorId == null)
@@ -62,12 +53,6 @@ public class RecipesController : BaseController
     public ActionResult<RecipeDto> UpdateRecipe(int id,UpdateRecipeDto dto)
     {
         var recipe = EnsureUserOwnsRecipe(id);
-        
-        var error = ValidateRecipeDto(dto.Name, dto.Description, dto.Ingredients);
-        if (error != null)
-        {
-            return error;
-        }
         
         recipe.Name = dto.Name;
         recipe.Description = dto.Description;
@@ -98,21 +83,8 @@ public class RecipesController : BaseController
     [HttpPost("{id:int}/rating")]
     public ActionResult<RecipeDto> AddRating(int id, AddRatingDto dto)
     {
-        if (dto.Rating < MinRating || dto.Rating > MaxRating) return BadRequest("Оценка должна быть от 1 до 5");
-
         var recipe = _recipeRepository.AddRating(id, dto.Rating);
         return Ok(recipe.ToDto());
-    }
-
-    private ActionResult? ValidateRecipeDto(string name, string description, List<RecipeIngredientInputDto> ingredients)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return BadRequest("Название рецепта обязательно");
-        if (string.IsNullOrWhiteSpace(description))
-            return BadRequest("Описание рецепта обязательно");
-        if (ingredients == null || ingredients.Count == 0)
-            return BadRequest("Рецепт должен содержать хотя бы один ингредиент");
-        return null;
     }
 
     private Recipe EnsureUserOwnsRecipe(int recipeId)
