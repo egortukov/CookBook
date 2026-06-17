@@ -46,27 +46,21 @@ public class RecipeRepository : IRecipeRepository
             .ToList();
     }
 
-    public Recipe UpdateRecipe(int id, Recipe recipe)
+    public Recipe UpdateRecipe(Recipe recipe)
     {
-        var recipeToUpdate = GetRecipeWithIngredients(id);
-
         EnsureIngredientsExist(recipe.Ingredients);
 
-        recipeToUpdate.Name = recipe.Name.Trim();
-        recipeToUpdate.Description = recipe.Description.Trim();
-        recipeToUpdate.Ingredients.Clear();
-        foreach (var ingredient in recipe.Ingredients) recipeToUpdate.Ingredients.Add(ingredient);
-
+        recipe.Name = recipe.Name.Trim();
+        recipe.Description = recipe.Description.Trim();
+        
         _context.SaveChanges();
 
-        return recipeToUpdate;
+        return GetRecipeWithIngredients(recipe.Id);
     }
 
-    public void DeleteRecipe(int id)
+    public void DeleteRecipe(Recipe recipe)
     {
-        var recipeToDelete = GetRecipeWithIngredients(id);
-
-        _context.Recipes.Remove(recipeToDelete);
+        _context.Recipes.Remove(recipe);
 
         _context.SaveChanges();
     }

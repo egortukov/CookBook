@@ -10,4 +10,6 @@ public class JwtOptions
     public required string Audience { get; init; }
     [Required]
     public required string Secret { get; init; }
+    [Required]
+    public required int ExpirationMinutes { get; init; }
 }

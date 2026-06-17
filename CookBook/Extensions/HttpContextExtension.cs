@@ -4,9 +4,10 @@ namespace CookBook.Extensions;
 
 public static class HttpContextExtensions
 {
-    public static int GetUserId(this HttpContext context)
+    public static int? GetUserId(this HttpContext context)
     {
         var claim = context.User.FindFirst(ClaimTypes.NameIdentifier);
-        return int.Parse(claim!.Value);
+        if (claim is null) return null;
+        return int.TryParse(claim!.Value, out var Id) ? Id : null;
     }
 }

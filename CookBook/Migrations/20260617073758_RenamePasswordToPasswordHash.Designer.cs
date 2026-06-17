@@ -2,6 +2,7 @@
 using CookBook.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -10,9 +11,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CookBook.Migrations
 {
     [DbContext(typeof(CookBookDbContext))]
-    partial class CookBookDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260617073758_RenamePasswordToPasswordHash")]
+    partial class RenamePasswordToPasswordHash
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

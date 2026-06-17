@@ -17,7 +17,7 @@ public class AuthService(CookBookDbContext dbContext, IJwtTokenGenerator jwtToke
         var user = new User
         {
             Login = dto.Login,
-            Password =  BCrypt.Net.BCrypt.HashPassword(dto.Password)
+            PasswordHash =  BCrypt.Net.BCrypt.HashPassword(dto.Password)
         };
         dbContext.Users.Add(user);
         dbContext.SaveChanges();
@@ -31,12 +31,12 @@ public class AuthService(CookBookDbContext dbContext, IJwtTokenGenerator jwtToke
         
         if (user is null)
         {
-            throw new NotFoundException("Пользователь не найден");
+            throw new UnauthorizedException("Неверный логин или пароль");
         }
 
-        if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.Password))
+        if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
         {
-            throw new NotFoundException("Неверный пароль");
+            throw new UnauthorizedException("Неверный логин или пароль");
         }
 
         return jwtTokenGenerator.Generate(user);

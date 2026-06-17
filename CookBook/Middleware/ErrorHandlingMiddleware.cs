@@ -33,6 +33,11 @@ public class ErrorHandlingMiddleware
             context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
             await context.Response.WriteAsJsonAsync(new { error = ex.Message });
         }
+        catch (UnauthorizedException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+        }
         catch (Exception)
         {
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;

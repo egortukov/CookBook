@@ -2,6 +2,7 @@ using CookBook.DTOs;
 using CookBook.Exceptions;
 using CookBook.Extensions;
 using CookBook.Mappings;
+using CookBook.Models;
 using CookBook.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -46,24 +47,40 @@ public class RecipesController : BaseController
         }
 
         var authorId = HttpContext.GetUserId();
+        
+        if (authorId == null)
+        {
+            throw new UnauthorizedException("Авторизуйтесь.");
+        }
 
-        var recipe = _recipeRepository.AddRecipe(dto.ToModel(authorId));
+        var recipe = _recipeRepository.AddRecipe(dto.ToModel(authorId.Value));
 
         return CreatedAtAction(nameof(GetRecipe), new { id = recipe.Id }, recipe.ToDto());
     }
 
     [HttpPut("{id:int}")]
-    public ActionResult<RecipeDto> UpdateRecipe(int id, UpdateRecipeDto dto)
+    public ActionResult<RecipeDto> UpdateRecipe(int id,UpdateRecipeDto dto)
     {
-        EnsureUserOwnsRecipe(id);
+        var recipe = EnsureUserOwnsRecipe(id);
         
         var error = ValidateRecipeDto(dto.Name, dto.Description, dto.Ingredients);
         if (error != null)
         {
             return error;
         }
+        
+        recipe.Name = dto.Name;
+        recipe.Description = dto.Description;
+        recipe.Ingredients.Clear();
+        foreach (var i in dto.Ingredients)
+            recipe.Ingredients.Add(new RecipeIngredient
+            {
+                IngredientId = i.IngredientId,
+                Amount = i.Amount,
+                Unit = i.Unit
+            });
 
-        var updated = _recipeRepository.UpdateRecipe(id, dto.ToModel());
+        var updated = _recipeRepository.UpdateRecipe(recipe);
         return Ok(updated.ToDto());
     }
 
@@ -71,9 +88,9 @@ public class RecipesController : BaseController
     public ActionResult DeleteRecipe(int id)
     {
         
-        EnsureUserOwnsRecipe(id);
+        var recipe = EnsureUserOwnsRecipe(id);
         
-        _recipeRepository.DeleteRecipe(id);
+        _recipeRepository.DeleteRecipe(recipe);
 
         return NoContent();
     }
@@ -98,14 +115,22 @@ public class RecipesController : BaseController
         return null;
     }
 
-    private void EnsureUserOwnsRecipe(int recipeId)
+    private Recipe EnsureUserOwnsRecipe(int recipeId)
     {
         var userId = HttpContext.GetUserId();
+
+        if (userId == null)
+        {
+            throw new UnauthorizedException("Авторизуйтесь.");
+        }
+
         var recipe = _recipeRepository.GetRecipe(recipeId);
 
         if (recipe.AuthorId != userId)
         {
             throw new ForbiddenException("Вы не являетесь автором этого рецепта");
         }
+        
+        return recipe;
     }
 }
