@@ -9,14 +9,16 @@ public class AuthService(CookBookDbContext dbContext, IJwtTokenGenerator jwtToke
 {
     public User Register(RegisterDto dto)
     {
-        if (dbContext.Users.Any(u => u.Login == dto.Login))
+        var login = dto.Login.Trim();
+        
+        if (dbContext.Users.Any(u => u.Login == login))
         {
             throw new AlreadyExistsException("Пользователь с таким Логином уже существует");
         }
                 
         var user = new User
         {
-            Login = dto.Login,
+            Login = login,
             PasswordHash =  BCrypt.Net.BCrypt.HashPassword(dto.Password)
         };
         dbContext.Users.Add(user);
@@ -27,7 +29,9 @@ public class AuthService(CookBookDbContext dbContext, IJwtTokenGenerator jwtToke
 
     public string Login(LoginDto dto)
     {
-        var user = dbContext.Users.FirstOrDefault(u => u.Login == dto.Login);
+        var login = dto.Login.Trim();
+        
+        var user = dbContext.Users.FirstOrDefault(u => u.Login == login);
         
         if (user is null)
         {

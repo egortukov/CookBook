@@ -27,8 +27,8 @@ public static class RecipeMappings
         return new Recipe
         {
             AuthorId = authorId,
-            Name = dto.Name,
-            Description = dto.Description,
+            Name = dto.Name.Trim(),
+            Description = dto.Description.Trim(),
             Ingredients = MapIngredients(dto.Ingredients)
         };
     }
@@ -37,8 +37,8 @@ public static class RecipeMappings
     {
         return new Recipe
         {
-            Name = dto.Name,
-            Description = dto.Description,
+            Name = dto.Name.Trim(),
+            Description = dto.Description.Trim(),
             Ingredients = MapIngredients(dto.Ingredients)
         };
     }

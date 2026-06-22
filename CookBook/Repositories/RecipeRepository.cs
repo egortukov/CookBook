@@ -18,9 +18,6 @@ public class RecipeRepository : IRecipeRepository
     {
         EnsureIngredientsExist(recipe.Ingredients);
 
-        recipe.Name = recipe.Name.Trim();
-        recipe.Description = recipe.Description.Trim();
-
         _context.Recipes.Add(recipe);
         _context.SaveChanges();
 
@@ -49,9 +46,6 @@ public class RecipeRepository : IRecipeRepository
     public Recipe UpdateRecipe(Recipe recipe)
     {
         EnsureIngredientsExist(recipe.Ingredients);
-
-        recipe.Name = recipe.Name.Trim();
-        recipe.Description = recipe.Description.Trim();
         
         _context.SaveChanges();
 

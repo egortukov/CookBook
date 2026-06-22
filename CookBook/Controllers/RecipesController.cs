@@ -39,12 +39,7 @@ public class RecipesController : BaseController
     {
         var authorId = HttpContext.GetUserId();
         
-        if (authorId == null)
-        {
-            throw new UnauthorizedException("Авторизуйтесь.");
-        }
-
-        var recipe = _recipeRepository.AddRecipe(dto.ToModel(authorId.Value));
+        var recipe = _recipeRepository.AddRecipe(dto.ToModel(authorId!.Value));
 
         return CreatedAtAction(nameof(GetRecipe), new { id = recipe.Id }, recipe.ToDto());
     }
@@ -90,12 +85,7 @@ public class RecipesController : BaseController
     private Recipe EnsureUserOwnsRecipe(int recipeId)
     {
         var userId = HttpContext.GetUserId();
-
-        if (userId == null)
-        {
-            throw new UnauthorizedException("Авторизуйтесь.");
-        }
-
+        
         var recipe = _recipeRepository.GetRecipe(recipeId);
 
         if (recipe.AuthorId != userId)
