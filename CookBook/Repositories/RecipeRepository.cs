@@ -1,4 +1,6 @@
 using CookBook.Database;
+using CookBook.DTOs;
+using CookBook.Enums;
 using CookBook.Exceptions;
 using CookBook.Models;
 using Microsoft.EntityFrameworkCore;
@@ -35,18 +37,48 @@ public class RecipeRepository : IRecipeRepository
         return recipe;
     }
 
-    public List<Recipe> GetRecipes()
+    public List<Recipe> GetRecipes(RecipeParametersDto parameters)
     {
-        return _context.Recipes
+        IQueryable<Recipe> query = _context.Recipes
             .Include(r => r.Ingredients)
-            .ThenInclude(ri => ri.Ingredient)
-            .ToList();
+            .ThenInclude(ri => ri.Ingredient);
+
+        if (parameters.Name is not null)
+        {
+            query = query.Where(r => r.Name.Contains(parameters.Name));
+        }
+
+        if (parameters.AuthorId is not null)
+        {
+            query = query.Where(r => r.AuthorId == parameters.AuthorId);
+        }
+
+        if (parameters.MinRating is not null)
+        {
+            query = query.Where(r => r.RatingCount > 0 && r.RatingSum / r.RatingCount >= parameters.MinRating);
+        }
+
+        switch (parameters.SortBy)
+        {
+            case RecipeSortBy.Name:
+                query = parameters.SortDescending == true
+                    ? query.OrderByDescending(r => r.Name)
+                    : query.OrderBy(r => r.Name);
+                break;
+            case RecipeSortBy.Rating:
+                query = parameters.SortDescending == true
+                    ? query.OrderByDescending(r => r.RatingSum / r.RatingCount)
+                    : query.OrderBy(r => r.RatingSum / r.RatingCount);
+                break;
+        }
+
+        return query.ToList();
     }
 
     public Recipe UpdateRecipe(Recipe recipe)
     {
         EnsureIngredientsExist(recipe.Ingredients);
-        
+
         _context.SaveChanges();
 
         return GetRecipeWithIngredients(recipe.Id);

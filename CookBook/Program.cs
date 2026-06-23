@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CookBook.Configurations;
 using CookBook.Database;
 using CookBook.Middleware;
@@ -11,7 +12,9 @@ using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options => 
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddOptions<DatabaseOptions>()

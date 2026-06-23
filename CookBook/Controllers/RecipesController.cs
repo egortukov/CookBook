@@ -20,9 +20,9 @@ public class RecipesController : BaseController
 
     [AllowAnonymous]
     [HttpGet]
-    public ActionResult<IEnumerable<RecipeDto>> GetRecipes()
+    public ActionResult<IEnumerable<RecipeDto>> GetRecipes([FromQuery] RecipeParametersDto parameters)
     {
-        return _recipeRepository.GetRecipes().Select(r => r.ToDto()).ToList();
+        return _recipeRepository.GetRecipes(parameters).Select(r => r.ToDto()).ToList();
     }
 
     [AllowAnonymous]
