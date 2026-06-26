@@ -9,17 +9,17 @@ public class AuthController(IAuthService authService) : BaseController
 {
     [AllowAnonymous]
     [HttpPost("register")]
-    public ActionResult Register(RegisterDto dto)
+    public async Task<ActionResult> Register(RegisterDto dto)
     {
-        var user = authService.Register(dto);
+        var user = await authService.Register(dto);
         return Ok(user.Id);
     }
     
     [AllowAnonymous]
     [HttpPost("login")]
-    public ActionResult<string> Login(LoginDto dto)
+    public async Task<ActionResult<string>> Login(LoginDto dto)
     {
-        var token = authService.Login(dto);
+        var token = await authService.Login(dto);
         return Ok(token);
     }
 }

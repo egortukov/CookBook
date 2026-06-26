@@ -5,6 +5,6 @@ namespace CookBook.Services;
 
 public interface IAuthService
 {
-    public User Register(RegisterDto dto);
-    public string Login(LoginDto dto);
+    public Task<User> Register(RegisterDto dto);
+    public Task<string> Login(LoginDto dto);
 }

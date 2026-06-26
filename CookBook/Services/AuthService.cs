@@ -2,37 +2,38 @@ using CookBook.Database;
 using CookBook.DTOs;
 using CookBook.Exceptions;
 using CookBook.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace CookBook.Services;
 
 public class AuthService(CookBookDbContext dbContext, IJwtTokenGenerator jwtTokenGenerator) : IAuthService
 {
-    public User Register(RegisterDto dto)
+    public async Task<User> Register(RegisterDto dto)
     {
         var login = dto.Login.Trim();
-        
-        if (dbContext.Users.Any(u => u.Login == login))
+
+        if (await dbContext.Users.AnyAsync(u => u.Login == login))
         {
             throw new AlreadyExistsException("Пользователь с таким Логином уже существует");
         }
-                
+
         var user = new User
         {
             Login = login,
-            PasswordHash =  BCrypt.Net.BCrypt.HashPassword(dto.Password)
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password)
         };
         dbContext.Users.Add(user);
-        dbContext.SaveChanges();
-        
+        await dbContext.SaveChangesAsync();
+
         return user;
     }
 
-    public string Login(LoginDto dto)
+    public async Task<string> Login(LoginDto dto)
     {
         var login = dto.Login.Trim();
-        
-        var user = dbContext.Users.FirstOrDefault(u => u.Login == login);
-        
+
+        var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Login == login);
+
         if (user is null)
         {
             throw new UnauthorizedException("Неверный логин или пароль");

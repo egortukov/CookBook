@@ -16,28 +16,30 @@ public class RecipeRepository : IRecipeRepository
         _context = context;
     }
 
-    public Recipe AddRecipe(Recipe recipe)
+    public async Task<Recipe> AddRecipe(Recipe recipe)
     {
-        EnsureIngredientsExist(recipe.Ingredients);
+        await EnsureIngredientsExist(recipe.Ingredients);
 
         _context.Recipes.Add(recipe);
-        _context.SaveChanges();
 
-        return GetRecipeWithIngredients(recipe.Id);
+        await _context.SaveChangesAsync();
+
+        return await GetRecipeWithIngredients(recipe.Id);
     }
 
-    public Recipe GetRecipe(int id)
+    public async Task<Recipe> GetRecipe(int id)
     {
-        var recipe = _context.Recipes
+        var recipe = await _context.Recipes
             .Include(r => r.Ingredients)
             .ThenInclude(ri => ri.Ingredient)
-            .FirstOrDefault(x => x.Id == id);
+            .FirstOrDefaultAsync(x => x.Id == id);
         if (recipe is null)
             throw new NotFoundException("Рецепт не найден");
+
         return recipe;
     }
 
-    public List<Recipe> GetRecipes(RecipeParametersDto parameters)
+    public async Task<List<Recipe>> GetRecipes(RecipeParametersDto parameters)
     {
         IQueryable<Recipe> query = _context.Recipes
             .Include(r => r.Ingredients)
@@ -72,49 +74,49 @@ public class RecipeRepository : IRecipeRepository
                 break;
         }
 
-        return query.ToList();
+        return await query.ToListAsync();
     }
 
-    public Recipe UpdateRecipe(Recipe recipe)
+    public async Task<Recipe> UpdateRecipe(Recipe recipe)
     {
-        EnsureIngredientsExist(recipe.Ingredients);
+        await EnsureIngredientsExist(recipe.Ingredients);
 
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
-        return GetRecipeWithIngredients(recipe.Id);
+        return await GetRecipeWithIngredients(recipe.Id);
     }
 
-    public void DeleteRecipe(Recipe recipe)
+    public async Task DeleteRecipe(Recipe recipe)
     {
         _context.Recipes.Remove(recipe);
 
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 
-    public Recipe AddRating(int id, int rating)
+    public async Task<Recipe> AddRating(int id, int rating)
     {
-        var recipe = GetRecipeWithIngredients(id);
+        var recipe = await GetRecipeWithIngredients(id);
 
         recipe.RatingSum += rating;
         recipe.RatingCount++;
 
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
         return recipe;
     }
 
-    private void EnsureIngredientsExist(List<RecipeIngredient> ingredients)
+    private async Task EnsureIngredientsExist(List<RecipeIngredient> ingredients)
     {
         foreach (var ingredient in ingredients)
-            if (!_context.Ingredients.Any(x => x.Id == ingredient.IngredientId))
+            if (!await _context.Ingredients.AnyAsync(x => x.Id == ingredient.IngredientId))
                 throw new NotFoundException("Ингредиент не найден");
     }
 
-    private Recipe GetRecipeWithIngredients(int id)
+    private async Task<Recipe> GetRecipeWithIngredients(int id)
     {
-        var recipe = _context.Recipes
+        var recipe = await _context.Recipes
             .Include(r => r.Ingredients)
             .ThenInclude(ri => ri.Ingredient)
-            .FirstOrDefault(r => r.Id == id);
+            .FirstOrDefaultAsync(r => r.Id == id);
         if (recipe is null)
             throw new NotFoundException("Рецепт не найден");
         return recipe;

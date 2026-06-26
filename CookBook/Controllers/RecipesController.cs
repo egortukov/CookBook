@@ -20,34 +20,35 @@ public class RecipesController : BaseController
 
     [AllowAnonymous]
     [HttpGet]
-    public ActionResult<IEnumerable<RecipeDto>> GetRecipes([FromQuery] RecipeParametersDto parameters)
+    public async Task<ActionResult<IEnumerable<RecipeDto>>> GetRecipes([FromQuery] RecipeParametersDto parameters)
     {
-        return _recipeRepository.GetRecipes(parameters).Select(r => r.ToDto()).ToList();
+        var recipes = await _recipeRepository.GetRecipes(parameters);
+        return recipes.Select(r => r.ToDto()).ToList();
     }
 
     [AllowAnonymous]
     [HttpGet("{id:int}")]
-    public ActionResult<RecipeDto> GetRecipe(int id)
+    public async Task<ActionResult<RecipeDto>> GetRecipe(int id)
     {
-        var recipe = _recipeRepository.GetRecipe(id);
+        var recipe = await _recipeRepository.GetRecipe(id);
 
         return Ok(recipe.ToDto());
     }
 
     [HttpPost]
-    public ActionResult<RecipeDto> AddRecipe(CreateRecipeDto dto)
+    public async Task< ActionResult<RecipeDto>> AddRecipe(CreateRecipeDto dto)
     {
         var authorId = HttpContext.GetUserId();
         
-        var recipe = _recipeRepository.AddRecipe(dto.ToModel(authorId!.Value));
+        var recipe = await _recipeRepository.AddRecipe(dto.ToModel(authorId!.Value));
 
         return CreatedAtAction(nameof(GetRecipe), new { id = recipe.Id }, recipe.ToDto());
     }
 
     [HttpPut("{id:int}")]
-    public ActionResult<RecipeDto> UpdateRecipe(int id,UpdateRecipeDto dto)
+    public async Task<ActionResult<RecipeDto>> UpdateRecipe(int id,UpdateRecipeDto dto)
     {
-        var recipe = EnsureUserOwnsRecipe(id);
+        var recipe = await EnsureUserOwnsRecipe(id);
         
         recipe.Name = dto.Name;
         recipe.Description = dto.Description;
@@ -60,33 +61,33 @@ public class RecipesController : BaseController
                 Unit = i.Unit
             });
 
-        var updated = _recipeRepository.UpdateRecipe(recipe);
+        var updated = await _recipeRepository.UpdateRecipe(recipe);
         return Ok(updated.ToDto());
     }
 
     [HttpDelete("{id:int}")]
-    public ActionResult DeleteRecipe(int id)
+    public async Task<ActionResult> DeleteRecipe(int id)
     {
         
-        var recipe = EnsureUserOwnsRecipe(id);
+        var recipe = await EnsureUserOwnsRecipe(id);
         
-        _recipeRepository.DeleteRecipe(recipe);
+        await _recipeRepository.DeleteRecipe(recipe);
 
         return NoContent();
     }
 
     [HttpPost("{id:int}/rating")]
-    public ActionResult<RecipeDto> AddRating(int id, AddRatingDto dto)
+    public async Task<ActionResult<RecipeDto>> AddRating(int id, AddRatingDto dto)
     {
-        var recipe = _recipeRepository.AddRating(id, dto.Rating);
+        var recipe = await _recipeRepository.AddRating(id, dto.Rating);
         return Ok(recipe.ToDto());
     }
 
-    private Recipe EnsureUserOwnsRecipe(int recipeId)
+    private async Task<Recipe> EnsureUserOwnsRecipe(int recipeId)
     {
         var userId = HttpContext.GetUserId();
         
-        var recipe = _recipeRepository.GetRecipe(recipeId);
+        var recipe = await _recipeRepository.GetRecipe(recipeId);
 
         if (recipe.AuthorId != userId)
         {

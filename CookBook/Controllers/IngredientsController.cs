@@ -2,6 +2,7 @@ using CookBook.Database;
 using CookBook.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace CookBook.Controllers;
 
@@ -16,10 +17,10 @@ public class IngredientsController : BaseController
 
     [AllowAnonymous]
     [HttpGet]
-    public ActionResult<List<IngredientDto>> GetIngredients()
+    public async Task<ActionResult<List<IngredientDto>>> GetIngredients()
     {
-        return _context.Ingredients
+        return await _context.Ingredients
             .Select(i => new IngredientDto(i.Id, i.Name))
-            .ToList();
+            .ToListAsync();
     }
 }
