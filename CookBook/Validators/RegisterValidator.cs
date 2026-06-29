@@ -1,11 +1,11 @@
 using CookBook.DTOs;
 using FluentValidation;
 
-namespace CookBook.Services.Validators;
+namespace CookBook.Validators;
 
-public class LoginValidator : AbstractValidator<LoginDto>
+public class RegisterValidator : AbstractValidator<RegisterDto>
 {
-    public LoginValidator()
+    public RegisterValidator()
     {
         RuleFor(dto => dto.Login)
             .NotNull()

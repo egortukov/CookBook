@@ -1,9 +1,9 @@
 using CookBook.DTOs;
 using FluentValidation;
 
-namespace CookBook.Services.Validators;
+namespace CookBook.Validators;
 
-public class RecipeIngredientInputValidator: AbstractValidator<RecipeIngredientInputDto>
+public class RecipeIngredientInputValidator : AbstractValidator<RecipeIngredientInputDto>
 {
     public RecipeIngredientInputValidator()
     {
@@ -14,5 +14,8 @@ public class RecipeIngredientInputValidator: AbstractValidator<RecipeIngredientI
         RuleFor(dto => dto.Amount)
             .GreaterThan(0)
             .WithMessage("Количество должно быть больше 0");
+
+        RuleFor(dto => dto.Unit)
+            .IsInEnum();
     }
 }

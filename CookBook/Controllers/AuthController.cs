@@ -11,7 +11,7 @@ public class AuthController(IAuthService authService) : BaseController
     [HttpPost("register")]
     public async Task<ActionResult> Register(RegisterDto dto)
     {
-        var user = await authService.Register(dto);
+        var user = await authService.RegisterAsync(dto);
         return Ok(user.Id);
     }
     
@@ -19,7 +19,7 @@ public class AuthController(IAuthService authService) : BaseController
     [HttpPost("login")]
     public async Task<ActionResult<string>> Login(LoginDto dto)
     {
-        var token = await authService.Login(dto);
+        var token = await authService.LoginAsync(dto);
         return Ok(token);
     }
 }

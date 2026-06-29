@@ -6,6 +6,8 @@ using CookBook.Repositories;
 using CookBook.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
@@ -13,7 +15,7 @@ using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers()
-    .AddJsonOptions(options => 
+    .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddFluentValidationAutoValidation();
@@ -25,7 +27,11 @@ builder.Services.AddOptions<JwtOptions>()
     .Bind(builder.Configuration.GetRequiredSection("Jwt"))
     .ValidateDataAnnotations()
     .ValidateOnStart();
-builder.Services.AddDbContext<CookBookDbContext>();
+builder.Services.AddDbContext<CookBookDbContext>((sp, options) =>
+{
+    var dbOptions = sp.GetRequiredService<IOptions<DatabaseOptions>>().Value;
+    options.UseNpgsql(dbOptions.ConnectionString);
+});
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddTransient<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddEndpointsApiExplorer();

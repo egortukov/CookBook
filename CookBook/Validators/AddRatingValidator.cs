@@ -1,7 +1,7 @@
 using CookBook.DTOs;
 using FluentValidation;
 
-namespace CookBook.Services.Validators;
+namespace CookBook.Validators;
 
 public class AddRatingValidator : AbstractValidator<AddRatingDto>
 {

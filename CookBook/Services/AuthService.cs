@@ -8,7 +8,7 @@ namespace CookBook.Services;
 
 public class AuthService(CookBookDbContext dbContext, IJwtTokenGenerator jwtTokenGenerator) : IAuthService
 {
-    public async Task<User> Register(RegisterDto dto)
+    public async Task<User> RegisterAsync(RegisterDto dto)
     {
         var login = dto.Login.Trim();
 
@@ -28,7 +28,7 @@ public class AuthService(CookBookDbContext dbContext, IJwtTokenGenerator jwtToke
         return user;
     }
 
-    public async Task<string> Login(LoginDto dto)
+    public async Task<string> LoginAsync(LoginDto dto)
     {
         var login = dto.Login.Trim();
 

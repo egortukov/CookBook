@@ -2,6 +2,7 @@ using CookBook.Database;
 using CookBook.DTOs;
 using CookBook.Enums;
 using CookBook.Exceptions;
+using CookBook.Filters;
 using CookBook.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,30 +17,20 @@ public class RecipeRepository : IRecipeRepository
         _context = context;
     }
 
-    public async Task<Recipe> AddRecipe(Recipe recipe)
+    public async Task<Recipe> AddRecipeAsync(Recipe recipe)
     {
-        await EnsureIngredientsExist(recipe.Ingredients);
+        await EnsureIngredientsExistAsync(recipe.Ingredients);
 
         _context.Recipes.Add(recipe);
 
         await _context.SaveChangesAsync();
 
-        return await GetRecipeWithIngredients(recipe.Id);
+        return await GetRecipeWithIngredientsAsync(recipe.Id);
     }
 
-    public async Task<Recipe> GetRecipe(int id)
-    {
-        var recipe = await _context.Recipes
-            .Include(r => r.Ingredients)
-            .ThenInclude(ri => ri.Ingredient)
-            .FirstOrDefaultAsync(x => x.Id == id);
-        if (recipe is null)
-            throw new NotFoundException("Рецепт не найден");
+    public Task<Recipe> GetRecipeAsync(int id) => GetRecipeWithIngredientsAsync(id);
 
-        return recipe;
-    }
-
-    public async Task<List<Recipe>> GetRecipes(RecipeParametersDto parameters)
+    public async Task<List<Recipe>> GetRecipesAsync(RecipeFilter parameters)
     {
         IQueryable<Recipe> query = _context.Recipes
             .Include(r => r.Ingredients)
@@ -47,7 +38,7 @@ public class RecipeRepository : IRecipeRepository
 
         if (parameters.Name is not null)
         {
-            query = query.Where(r => r.Name.Contains(parameters.Name));
+            query = query.Where(r => EF.Functions.ILike(r.Name, $"%{parameters.Name.Trim()}%"));
         }
 
         if (parameters.AuthorId is not null)
@@ -57,7 +48,7 @@ public class RecipeRepository : IRecipeRepository
 
         if (parameters.MinRating is not null)
         {
-            query = query.Where(r => r.RatingCount > 0 && r.RatingSum / r.RatingCount >= parameters.MinRating);
+            query = query.Where(r => r.RatingCount > 0 && (double)r.RatingSum / r.RatingCount >= parameters.MinRating);
         }
 
         switch (parameters.SortBy)
@@ -69,33 +60,45 @@ public class RecipeRepository : IRecipeRepository
                 break;
             case RecipeSortBy.Rating:
                 query = parameters.SortDescending == true
-                    ? query.OrderByDescending(r => r.RatingSum / r.RatingCount)
-                    : query.OrderBy(r => r.RatingSum / r.RatingCount);
+                    ? query.OrderByDescending(r => r.RatingCount == 0 ? 0 : (double)r.RatingSum / r.RatingCount)
+                    : query.OrderBy(r => r.RatingCount == 0 ? 0 : (double)r.RatingSum / r.RatingCount);
                 break;
         }
 
         return await query.ToListAsync();
     }
 
-    public async Task<Recipe> UpdateRecipe(Recipe recipe)
+    public async Task<Recipe> UpdateRecipeAsync(Recipe recipe, UpdateRecipeDto dto)
     {
-        await EnsureIngredientsExist(recipe.Ingredients);
+        recipe.Name = dto.Name.Trim();
+        recipe.Description = dto.Description.Trim();
+        recipe.Ingredients.Clear();
+        foreach (var i in dto.Ingredients)
+        {
+            recipe.Ingredients.Add(new RecipeIngredient
+            {
+                IngredientId = i.IngredientId,
+                Amount = i.Amount,
+                Unit = i.Unit
+            });
+        }
 
+        await EnsureIngredientsExistAsync(recipe.Ingredients);
         await _context.SaveChangesAsync();
 
-        return await GetRecipeWithIngredients(recipe.Id);
+        return await GetRecipeWithIngredientsAsync(recipe.Id);
     }
 
-    public async Task DeleteRecipe(Recipe recipe)
+    public async Task DeleteRecipeAsync(Recipe recipe)
     {
         _context.Recipes.Remove(recipe);
 
         await _context.SaveChangesAsync();
     }
 
-    public async Task<Recipe> AddRating(int id, int rating)
+    public async Task<Recipe> AddRatingAsync(int id, int rating)
     {
-        var recipe = await GetRecipeWithIngredients(id);
+        var recipe = await GetRecipeWithIngredientsAsync(id);
 
         recipe.RatingSum += rating;
         recipe.RatingCount++;
@@ -104,21 +107,31 @@ public class RecipeRepository : IRecipeRepository
         return recipe;
     }
 
-    private async Task EnsureIngredientsExist(List<RecipeIngredient> ingredients)
+    private async Task EnsureIngredientsExistAsync(List<RecipeIngredient> ingredients)
     {
-        foreach (var ingredient in ingredients)
-            if (!await _context.Ingredients.AnyAsync(x => x.Id == ingredient.IngredientId))
-                throw new NotFoundException("Ингредиент не найден");
+        var ids = ingredients.Select(i => i.IngredientId).ToList();
+        var existingIds = await _context.Ingredients
+            .Where(i => ids.Contains(i.Id))
+            .Select(i => i.Id)
+            .ToListAsync();
+
+        var missingId = ids.FirstOrDefault(id => !existingIds.Contains(id));
+        if (missingId != default)
+        {
+            throw new NotFoundException("Ингредиент не найден");
+        }
     }
 
-    private async Task<Recipe> GetRecipeWithIngredients(int id)
+    private async Task<Recipe> GetRecipeWithIngredientsAsync(int id)
     {
         var recipe = await _context.Recipes
             .Include(r => r.Ingredients)
             .ThenInclude(ri => ri.Ingredient)
             .FirstOrDefaultAsync(r => r.Id == id);
         if (recipe is null)
+        {
             throw new NotFoundException("Рецепт не найден");
+        }
         return recipe;
     }
 }

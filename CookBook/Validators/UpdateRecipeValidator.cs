@@ -1,11 +1,11 @@
 using CookBook.DTOs;
 using FluentValidation;
 
-namespace CookBook.Services.Validators;
+namespace CookBook.Validators;
 
-public class CreateRecipeValidator : AbstractValidator<CreateRecipeDto>
+public class UpdateRecipeValidator : AbstractValidator<UpdateRecipeDto>
 {
-    public CreateRecipeValidator()
+    public UpdateRecipeValidator()
     {
         RuleFor(dto => dto.Name)
             .NotNull()
@@ -16,11 +16,13 @@ public class CreateRecipeValidator : AbstractValidator<CreateRecipeDto>
             .NotNull()
             .NotEmpty()
             .MaximumLength(2000);
-        
+
         RuleFor(dto => dto.Ingredients)
             .NotNull()
             .NotEmpty()
-            .WithMessage("Рецепт должен содержать хотя бы один ингредиент");
+            .WithMessage("Рецепт должен содержать хотя бы один ингредиент")
+            .Must(ingredients => ingredients.Select(i => i.IngredientId).Distinct().Count() == ingredients.Count)
+            .WithMessage("Ингредиенты не должны повторяться");
 
         RuleForEach(dto => dto.Ingredients)
             .SetValidator(new RecipeIngredientInputValidator());

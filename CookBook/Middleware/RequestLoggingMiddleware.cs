@@ -16,13 +16,18 @@ public class RequestLoggingMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         var stopwatch = Stopwatch.StartNew();
-        await _next(context);
-        stopwatch.Stop();
-
-        _logger.LogInformation("{Method} {Url} -> {StatusCode} ({ElapsedMs}ms)",
-            context.Request.Method,
-            context.Request.Path,
-            context.Response.StatusCode,
-            stopwatch.ElapsedMilliseconds);
+        try
+        {
+            await _next(context);
+        }
+        finally
+        {
+            stopwatch.Stop();
+            _logger.LogInformation("{Method} {Url} -> {StatusCode} ({ElapsedMs}ms)",
+                context.Request.Method,
+                context.Request.Path,
+                context.Response.StatusCode,
+                stopwatch.ElapsedMilliseconds);
+        }
     }
 }

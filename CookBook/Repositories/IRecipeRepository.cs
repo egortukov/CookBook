@@ -1,14 +1,15 @@
 using CookBook.DTOs;
+using CookBook.Filters;
 using CookBook.Models;
 
 namespace CookBook.Repositories;
 
 public interface IRecipeRepository
 {
-    Task<Recipe> AddRecipe(Recipe recipe);
-    Task<Recipe> GetRecipe(int id);
-    Task<List<Recipe>> GetRecipes(RecipeParametersDto parameters);
-    Task<Recipe> UpdateRecipe(Recipe recipe);
-    Task DeleteRecipe(Recipe recipe);
-    Task<Recipe> AddRating(int id, int rating);
+    Task<Recipe> AddRecipeAsync(Recipe recipe);
+    Task<Recipe> GetRecipeAsync(int id);
+    Task<List<Recipe>> GetRecipesAsync(RecipeFilter parameters);
+    Task<Recipe> UpdateRecipeAsync(Recipe recipe, UpdateRecipeDto dto);
+    Task DeleteRecipeAsync(Recipe recipe);
+    Task<Recipe> AddRatingAsync(int id, int rating);
 }

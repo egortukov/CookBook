@@ -17,14 +17,6 @@ public class CookBookDbContext : DbContext
     {
         _dbOptions = dbOptions.Value;
     }
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        base.OnConfiguring(optionsBuilder);
-        optionsBuilder.UseNpgsql(_dbOptions.ConnectionString);
-        optionsBuilder.LogTo(Console.WriteLine, LogLevel.Debug);
-    }
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CookBookDbContext).Assembly);
